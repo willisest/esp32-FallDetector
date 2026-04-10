@@ -1,13 +1,14 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
 
 const char* ssid = "Willphone";
 const char* password = "bruhbruh";
 
 const char* mqtt_server = "a3au8j7vh6yy3c-ats.iot.us-east-2.amazonaws.com";  // e.g. a1b2c3-ats.iot.us-east-1.amazonaws.com
 const int mqtt_port = 8883;
-const char* mqtt_topic = "esp32/test";
+const char* mqtt_topic = "esp32/pub";
 
 static const char AMAZON_ROOT_CA1[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
@@ -146,7 +147,15 @@ void loop() {
 
   client.loop();
 
-  String payload = "{\"device\":\"esp32\",\"message\":\"Hello AWS IoT\",\"count\":1}";
+  StaticJsonDocument<200> doc;
+doc["device"] = "esp32";
+doc["message"] = "Hello AWS IoT";
+doc["count"] = 1;
+
+String payload;
+serializeJson(doc, payload);
+
+
   boolean ok = client.publish(mqtt_topic, payload.c_str());
 
   if (ok) {
