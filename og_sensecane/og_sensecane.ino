@@ -1,5 +1,5 @@
 // Basic demo for accelerometer readings from Adafruit MPU6050
-#include "secrets.h"
+#include "aws.h"
 #include <WiFi.h>
 
 
@@ -14,24 +14,66 @@ Adafruit_MPU6050 mpu;
 #define SCREEN_HEIGHT 32 
 #define OLED_RESET    -1 
 
-extern MQTTClient client;
+WiFiClientSecure net;
+PubSubClient client(net);
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
  const int buzzerPin = 23;
- 
 
+
+
+ //detect fall function
+
+unsigned long freeFallStartTime = 0;
+bool potentialFall = false;
+
+
+  void detectFall(float totalAcceleration) {
+
+    
+
+
+  if (totalAcceleration < 4.5 ){
+    potentialFall = true;
+    freeFallStartTime = millis();
+    
+  }
+  
+
+  // Step 2: Confirm Impact within a 500ms window
+  if (potentialFall) {
+    if (millis() - freeFallStartTime < 800) {
+      if (totalAcceleration > 20.0) {
+     
+        publishMessage("FALL DETECTED");
+         
+        potentialFall = false; // Reset to avoid double-triggering
+      }
+    } else {
+      potentialFall = false; // Timeout: Free-fall didn't lead to impact
+      
+    }
+  
+  }
+
+
+  publishMessage("NO FALL DETECTED");
+ 
+  
+}
  
 void setup(void) {
 
 
-void connectAWS(); // This starts the AWS connection from the other tab
-void publishMessage();
+Serial.begin(115200);
+  connectWiFi();
+  connectAWS();
 
   pinMode(buzzerPin, OUTPUT); // Sets the pin to "push" electricity
   digitalWrite(buzzerPin, LOW);
   
-  Serial.begin(115200);
+  
   while (!Serial)
     delay(10); 
 
@@ -54,7 +96,7 @@ if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
 
 
   
-  Serial.println("Adafruit MPU6050 test!");
+ // Serial.println("Adafruit MPU6050 test!");
 
   // Try to initialize!
   if (!mpu.begin()) {
@@ -66,7 +108,7 @@ if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
   Serial.println("MPU6050 Found!");
 
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  Serial.print("Accelerometer range set to: ");
+  /*Serial.print("Accelerometer range set to: ");
   switch (mpu.getAccelerometerRange()) {
   case MPU6050_RANGE_2_G:
     Serial.println("+-2G");
@@ -126,6 +168,9 @@ if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
 
   Serial.println("");
   delay(100);
+
+*/
+ 
 }
 
 
@@ -147,7 +192,7 @@ float totalAcceleration = sqrt(pow(a.acceleration.x, 2) + pow(a.acceleration.y, 
   
   display.clearDisplay();
   display.setCursor(0,0);
-
+/*
 // print out serially 
   Serial.print("Acceleration X: ");
   Serial.print(a.acceleration.x);
@@ -171,7 +216,7 @@ float totalAcceleration = sqrt(pow(a.acceleration.x, 2) + pow(a.acceleration.y, 
 
   Serial.println("");
   
-
+*/
   /* Print out the values */
   display.clearDisplay();
   display.print("Accel X: "); display.println(a.acceleration.x);
@@ -181,13 +226,7 @@ float totalAcceleration = sqrt(pow(a.acceleration.x, 2) + pow(a.acceleration.y, 
   display.display();           // 4. CRITICAL - Push the buffer to hardware
   delay(100);                  // 5. Small delay so the text doesn't flicker
 
+//fall threshold algorithm
 
-  if (totalAcceleration < 3)
-  {
-     publishMessage();
-  digitalWrite(buzzerPin, HIGH); // Sound starts
-  delay(100);                   // Wait 1 second
-  digitalWrite(buzzerPin, LOW);  // Sound stops
-  
-  }
+detectFall(totalAcceleration);
 }
