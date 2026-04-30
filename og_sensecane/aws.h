@@ -4,6 +4,9 @@
 #include <ArduinoJson.h>
 #include "secrets.h"
 
+#include <TinyGPS++.h>
+extern TinyGPSPlus gps;
+
  
 extern WiFiClientSecure net;
 extern PubSubClient client;
@@ -48,7 +51,7 @@ void connectAWS() {
 
 void publishMessage(String fallDetected){
   if (!client.connected()) {
-    connectAWS();1
+    connectAWS();
   }
 
   StaticJsonDocument<200> doc;
@@ -56,6 +59,14 @@ doc["device"] = "esp32";
 doc["message"] = "Hello AWS IoT";
 doc["count"] = 1;
 doc["fallDetected"] = fallDetected;
+ 
+if (gps.location.isValid()) {
+  doc["lat"] = gps.location.lat();
+  doc["lng"] = gps.location.lng();
+} else {
+  doc["lat"] = 0.0;
+  doc["lng"] = 0.0;
+}
 
 
 String payload;

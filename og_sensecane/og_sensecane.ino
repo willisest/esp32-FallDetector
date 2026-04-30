@@ -1,7 +1,7 @@
 // Basic demo for accelerometer readings from Adafruit MPU6050
 #include "aws.h"
 #include <WiFi.h>
-
+#include <TinyGPS++.h>
 
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
@@ -22,6 +22,12 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
  const int buzzerPin = 23;
 
 
+// GPS Setup
+TinyGPSPlus gps;
+HardwareSerial gpsSerial(1); // Use ESP32 Hardware UART 1
+const int RXPin = 34;
+const int TXPin = 35;
+const uint32_t GPSBaud = 9600;
 
  //detect fall function
 
@@ -69,6 +75,9 @@ void setup(void) {
 Serial.begin(115200);
   connectWiFi();
   connectAWS();
+
+  gpsSerial.begin(GPSBaud, SERIAL_8N1, RXPin, TXPin);
+  Serial.println("GPS Serial Started");
 
   pinMode(buzzerPin, OUTPUT); // Sets the pin to "push" electricity
   digitalWrite(buzzerPin, LOW);
@@ -187,7 +196,9 @@ void loop() {
 float totalAcceleration = sqrt(pow(a.acceleration.x, 2) + pow(a.acceleration.y, 2) + pow(a.acceleration.z, 2));
 
  
-  
+  while (gpsSerial.available() > 0) {
+    gps.encode(gpsSerial.read());
+  }
   
   
   display.clearDisplay();
